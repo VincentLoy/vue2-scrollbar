@@ -1,2 +1,1 @@
-import plugin from './components/vue-scrollbar.vue'
-module.exports = plugin;
+module.exports = require('./components/vue-scrollbar.vue');

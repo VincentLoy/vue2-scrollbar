@@ -51,257 +51,262 @@
 
 <script>
 
-  import VerticalScrollbar from './vertical-scrollbar.vue';
-  import HorizontalScrollbar from './horizontal-scrollbar.vue';
+    import VerticalScrollbar from './vertical-scrollbar.vue';
+    import HorizontalScrollbar from './horizontal-scrollbar.vue';
 
-  export default {
+    export default {
 
-    props: {
-      classes: String,
-      styles: Object,
-      speed: {
-        type: Number,
-        default: 53
-      }
-    },
+        props: {
+            classes: String,
+            styles: Object,
+            speed: {
+                type: Number,
+                default: 53,
+            },
+        },
 
-    components: {
-      VerticalScrollbar,
-      HorizontalScrollbar
-    },
+        components: {
+            VerticalScrollbar,
+            HorizontalScrollbar,
+        },
 
-    data () {
-      return  {
-        ready: false,
-        top: 0,
-        left: 0,
-        scrollAreaHeight: null,
-        scrollAreaWidth: null,
-        scrollWrapperHeight: null,
-        scrollWrapperWidth: null,
-        vMovement: 0,
-        hMovement: 0,
-        cachedvMovement: 0,
-        dragging: false,
-        start: { y: 0, x: 0}
-      }
-    },
+        data() {
+            return {
+                ready: false,
+                top: 0,
+                left: 0,
+                scrollAreaHeight: null,
+                scrollAreaWidth: null,
+                scrollWrapperHeight: null,
+                scrollWrapperWidth: null,
+                vMovement: 0,
+                hMovement: 0,
+                cachedvMovement: 0,
+                dragging: false,
+                start: { y: 0, x: 0},
+            };
+        },
 
-    computed: {
-     /**
-      * If vMovement and the cached one are the same, then parent scrolling is allowed.
-      * @returns {boolean}
-      */
-      allowBodyScrollVertical() {
-          return this.vMovement === this.cachedvMovement;
-      }
-    },
+        computed: {
+            /**
+             * If vMovement and the cached one are the same, then parent scrolling is allowed.
+             * @returns {boolean}
+             */
+            allowBodyScrollVertical() {
+                return this.vMovement === this.cachedvMovement;
+            },
+        },
 
-    methods: {
-      scroll(e){
-        // Make sure the content height is not changed
-        this.calculateSize(() => {
-          // Set the wheel step
-          let num = this.speed
+        methods: {
+            scroll(e) {
+                // Make sure the content height is not changed
+                this.calculateSize(() => {
+                    // Set the wheel step
+                    const num = this.speed;
 
-          // DOM events
-          let shifted = e.shiftKey
-          let scrollY = e.deltaY > 0 ? num : -(num)
-          let scrollX = e.deltaX > 0 ? num : -(num)
+                    // DOM events
+                    const shifted = e.shiftKey;
+                    const scrollY = e.deltaY > 0 ? num : -(num);
+                    let scrollX = e.deltaX > 0 ? num : -(num);
 
-          // Fix Mozilla Shifted Wheel~
-          if(shifted && e.deltaX == 0) scrollX = e.deltaY > 0 ? num : -(num)
+                    // Fix Mozilla Shifted Wheel~
+                    if (shifted && e.deltaX == 0) {
+                        scrollX = e.deltaY > 0 ? num : -(num);
+                    }
 
-          // Next Value
-          let nextY = this.top + scrollY
-          let nextX = this.left + scrollX
+                    // Next Value
+                    const nextY = this.top + scrollY;
+                    const nextX = this.left + scrollX;
 
-          // Is it Scrollable?
-          let canScrollY = this.scrollAreaHeight > this.scrollWrapperHeight
-          let canScrollX = this.scrollAreaWidth > this.scrollWrapperWidth
+                    // Is it Scrollable?
+                    const canScrollY = this.scrollAreaHeight > this.scrollWrapperHeight;
+                    const canScrollX = this.scrollAreaWidth > this.scrollWrapperWidth;
 
-          // Vertical Scrolling
-          if(canScrollY && !shifted) this.normalizeVertical(nextY)
+                    // Vertical Scrolling
+                    if (canScrollY && !shifted) {
+                        this.normalizeVertical(nextY);
+                    }
 
-          // Horizontal Scrolling
-          if(shifted && canScrollX) this.normalizeHorizontal(nextX)
-        })
+                    // Horizontal Scrolling
+                    if (shifted && canScrollX) {
+                        this.normalizeHorizontal(nextX);
+                    }
+                });
 
-        // prevent Default only if scrolled content is not at the top/bottom
-        if (!this.allowBodyScrollVertical) {
-          e.preventDefault()
-        }
+                // prevent Default only if scrolled content is not at the top/bottom
+                if (!this.allowBodyScrollVertical) {
+                    e.preventDefault();
+                }
+            },
 
-      },
+            // DRAG EVENT JUST FOR TOUCH DEVICE~
+            startDrag(e) {
+                const evt = e.changedTouches ? e.changedTouches[0] : e;
 
-      // DRAG EVENT JUST FOR TOUCH DEVICE~
-      startDrag(e){
-        let evt = e.changedTouches ? e.changedTouches[0] : e
+                // Make sure the content height is not changed
+                this.calculateSize(() => {
+                    // Prepare to drag
+                    this.dragging = true;
+                    this.start = { y: evt.clientY, x: evt.clientX };
+                });
 
-        // Make sure the content height is not changed
-        this.calculateSize(() => {
-          // Prepare to drag
-          this.dragging = true,
-          this.start = { y: evt.pageY, x: evt.pageX }
-        })
+                // It's important to make this after size calculation
+                if (!this.allowBodyScrollVertical) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            },
 
-        // It's important to make this after size calculation
-        if (!this.allowBodyScrollVertical) {
-          e.preventDefault()
-          e.stopPropagation()
-        }
-      },
+            onDrag(e) {
+                if (this.dragging){
+                    let evt = e.changedTouches ? e.changedTouches[0] : e;
 
-      onDrag(e){
-        if(this.dragging){
-          let evt = e.changedTouches ? e.changedTouches[0] : e
+                    // Invers the Movement
+                    const yMovement = this.start.y - evt.clientY;
+                    const xMovement = this.start.x - evt.clientX;
 
-          // Invers the Movement
-          let yMovement = this.start.y - evt.clientY
-          let xMovement = this.start.x - evt.clientX
+                    // Update the last e.client
+                    this.start = { y: evt.clientY, x: evt.clientX };
 
-          // Update the last e.client
-          this.start = { y: evt.clientY, x: evt.clientX }
+                    // The next Vertical Value will be
+                    const nextY = this.top + yMovement;
+                    const nextX = this.left + xMovement;
 
-          // The next Vertical Value will be
-          let nextY = this.top + yMovement
-          let nextX = this.left + xMovement
+                    this.normalizeVertical(nextY);
+                    this.normalizeHorizontal(nextX);
 
-          this.normalizeVertical(nextY)
-          this.normalizeHorizontal(nextX)
+                    if (!this.allowBodyScrollVertical) {
+                        e.preventDefault();
+                    }
+                }
+            },
 
-          if (!this.allowBodyScrollVertical) {
-              e.preventDefault()
-          }
-        }
-      },
+            stopDrag(e) {
+                this.dragging = false;
+            },
 
-      stopDrag(e){
-        this.dragging = false
-      },
+            scrollToY(y) {
+                this.normalizeVertical(y);
+            },
 
-      scrollToY(y) {
-        this.normalizeVertical(y)
-      },
+            scrollToX(x) {
+                this.normalizeVertical(x);
+            },
 
-      scrollToX(x) {
-        this.normalizeVertical(x)
-      },
+            normalizeVertical(next){
+                const elementSize = this.getSize();
 
-      normalizeVertical(next){
-        let elementSize = this.getSize()
+                // Vertical Scrolling
+                const lowerEnd = elementSize.scrollAreaHeight - elementSize.scrollWrapperHeight;
 
-        // Vertical Scrolling
-        let lowerEnd = elementSize.scrollAreaHeight - elementSize.scrollWrapperHeight
+                // Max Scroll Down
+                if (next > lowerEnd) next = lowerEnd;
 
-        // Max Scroll Down
-        if(next > lowerEnd) next = lowerEnd
+                // Max Scroll Up
+                else if (next < 0) next = 0
 
-        // Max Scroll Up
-        else if(next < 0) next = 0
+                // Cache previous Vertical movement value & Update the Vertical Value
+                this.top = next;
+                this.cachedvMovement = this.vMovement;
+                this.vMovement = next / elementSize.scrollAreaHeight * 100;
+            },
 
-        // Cache previous Vertical movement value & Update the Vertical Value
-        this.top = next,
-        this.cachedvMovement = this.vMovement
-        this.vMovement = next / elementSize.scrollAreaHeight * 100
-      },
+            normalizeHorizontal(next){
+                const elementSize = this.getSize();
 
-      normalizeHorizontal(next){
-        let elementSize = this.getSize()
+                // Horizontal Scrolling
+                const rightEnd = elementSize.scrollAreaWidth - this.scrollWrapperWidth;
 
-        // Horizontal Scrolling
-        let rightEnd = elementSize.scrollAreaWidth - this.scrollWrapperWidth
+                // Max Scroll Right
+                if (next > rightEnd) next = rightEnd;
 
-        // Max Scroll Right
-        if(next > rightEnd) next = rightEnd;
+                // Max Scroll Right
+                else if (next < 0) next = 0;
 
-        // Max Scroll Right
-        else if(next < 0) next = 0
+                // Update the Horizontal Value
+                this.left = next;
+                this.hMovement = next / elementSize.scrollAreaWidth * 100;
+            },
 
-        // Update the Horizontal Value
-        this.left = next,
-        this.hMovement = next / elementSize.scrollAreaWidth * 100
-      },
+            handleChangePosition (movement, orientation) {
+                // Make sure the content height is not changed
+                this.calculateSize(() => {
+                    // Convert Percentage to Pixel
+                    const next = movement / 100;
+                    if (orientation == 'vertical') {
+                        this.normalizeVertical(next * this.scrollAreaHeight);
+                    }
 
-      handleChangePosition(movement, orientation){
-        // Make sure the content height is not changed
-        this.calculateSize(() => {
-          // Convert Percentage to Pixel
-          let next = movement / 100
-          if( orientation == 'vertical' ) this.normalizeVertical( next * this.scrollAreaHeight )
-          if( orientation == 'horizontal' ) this.normalizeHorizontal( next * this.scrollAreaWidth )
-        })
-      },
+                    if (orientation == 'horizontal') {
+                        this.normalizeHorizontal(next * this.scrollAreaWidth);
+                    }
+                });
+            },
 
-      handleScrollbarDragging(){
-        this.dragging = true
-      },
+            handleScrollbarDragging() {
+                this.dragging = true;
+            },
 
-      handleScrollbarStopDrag(){
-        this.dragging = false
-      },
+            handleScrollbarStopDrag() {
+                this.dragging = false;
+            },
 
-      getSize(){
-        // The Elements
-        let $scrollArea = this.$refs.scrollArea
-        let $scrollWrapper = this.$refs.scrollWrapper
+            getSize() {
+                // The Elements
+                const $scrollArea = this.$refs.scrollArea;
+                const $scrollWrapper = this.$refs.scrollWrapper;
 
-        // Get new Elements Size
-        let elementSize = {
-          // Scroll Area Height and Width
-          scrollAreaHeight: $scrollArea.children[0].clientHeight,
-          scrollAreaWidth: $scrollArea.children[0].clientWidth,
+                // Get new Elements Size
+                const elementSize = {
+                    // Scroll Area Height and Width
+                    scrollAreaHeight: $scrollArea.children[0].clientHeight,
+                    scrollAreaWidth: $scrollArea.children[0].clientWidth,
 
-          // Scroll Wrapper Height and Width
-          scrollWrapperHeight: $scrollWrapper.clientHeight,
-          scrollWrapperWidth: $scrollWrapper.clientWidth,
-        }
-        return elementSize
-      },
+                    // Scroll Wrapper Height and Width
+                    scrollWrapperHeight: $scrollWrapper.clientHeight,
+                    scrollWrapperWidth: $scrollWrapper.clientWidth,
+                };
 
-      calculateSize(cb){
-        if(typeof cb !== 'function') cb = null;
+                return elementSize;
+            },
 
-        let elementSize = this.getSize()
+            calculateSize(cb){
+                if (typeof cb !== 'function') {
+                    cb = null;
+                }
 
-        if( elementSize.scrollWrapperHeight !== this.scrollWrapperHeight ||
-            elementSize.scrollWrapperWidth !== this.scrollWrapperWidth ||
-            elementSize.scrollAreaHeight !== this.scrollAreaHeight ||
-            elementSize.scrollAreaWidth !== this.scrollAreaWidth )
-        {
+                const elementSize = this.getSize();
 
-          // Scroll Area Height and Width
-          this.scrollAreaHeight = elementSize.scrollAreaHeight,
-          this.scrollAreaWidth = elementSize.scrollAreaWidth,
+                if (elementSize.scrollWrapperHeight !== this.scrollWrapperHeight ||
+                    elementSize.scrollWrapperWidth !== this.scrollWrapperWidth ||
+                    elementSize.scrollAreaHeight !== this.scrollAreaHeight ||
+                    elementSize.scrollAreaWidth !== this.scrollAreaWidth
+                ) {
+                    // Scroll Area Height and Width
+                    this.scrollAreaHeight = elementSize.scrollAreaHeight;
+                    this.scrollAreaWidth = elementSize.scrollAreaWidth;
 
-          // Scroll Wrapper Height and Width
-          this.scrollWrapperHeight = elementSize.scrollWrapperHeight,
-          this.scrollWrapperWidth = elementSize.scrollWrapperWidth,
+                    // Scroll Wrapper Height and Width
+                    this.scrollWrapperHeight = elementSize.scrollWrapperHeight;
+                    this.scrollWrapperWidth = elementSize.scrollWrapperWidth;
 
-          // Make sure The wrapper is Ready, then render the scrollbar
-          this.ready = true
+                    // Make sure The wrapper is Ready, then render the scrollbar
+                    this.ready = true;
+                }
+                return cb ? cb() : false;
+            },
+        },
 
-          return cb ? cb() : false
-        }
+        mounted () {
+            this.calculateSize();
 
-        else return cb ? cb() : false
-      }
+            // Attach The Event for Responsive View~
+            window.addEventListener('resize', this.calculateSize);
+        },
 
-
-    },
-
-    mounted () {
-      this.calculateSize()
-
-      // Attach The Event for Responsive View~
-      window.addEventListener('resize', this.calculateSize)
-    },
-
-    beforeDestroy (){
-      // Remove Event
-      window.removeEventListener('resize', this.calculateSize)
-    }
-
-  }
-
+        beforeDestroy() {
+            // Remove Event
+            window.removeEventListener('resize', this.calculateSize);
+        },
+    };
 </script>

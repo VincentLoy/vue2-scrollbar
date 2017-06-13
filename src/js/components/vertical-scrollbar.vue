@@ -1,179 +1,165 @@
 
 <template>
-  <div>
-    <div
-      v-if="height < 100"
-      class="vue-scrollbar__scrollbar-vertical"
-      ref="container"
-      @click="jump">
+    <div>
+        <div
+            v-if="height < 100"
+            class="vue-scrollbar__scrollbar-vertical"
+            ref="container"
+            @click="jump">
 
-      <div
-        :class="'scrollbar' + ( dragging || draggingFromParent ? '' : ' vue-scrollbar-transition')"
-        ref="scrollbar"
-        @touchstart="startDrag"
-        @mousedown="startDrag "
-        :style="{
-          height: height+'%',
-          top: scrolling + '%'
-        }">
-      </div>
+            <div
+                :class="'scrollbar' + ( dragging || draggingFromParent ? '' : ' vue-scrollbar-transition')"
+                ref="scrollbar"
+                @touchstart="startDrag"
+                @mousedown="startDrag "
+                :style="{
+                        height: height+'%',
+                        top: scrolling + '%'
+                        }">
+            </div>
 
+        </div>
     </div>
-  </div>
 </template>
 
 <script>
+    export default {
+        props: {
+            draggingFromParent: Boolean,
+            scrolling: Number,
+            wrapper: Object,
+            area: Object,
+            onChangePosition: Function,
+            onDragging: Function,
+            onStopDrag: Function,
+        },
 
-  export default {
+        data() {
+            return {
+                height: 0,
+                dragging: false,
+                start: 0,
+            };
+        },
 
-    props: {
-      draggingFromParent: Boolean,
-      scrolling: Number,
-      wrapper: Object,
-      area: Object,
-      onChangePosition: Function,
-      onDragging: Function,
-      onStopDrag: Function,
-    },
+        watch: {
+            'wrapper.height' (val, old) {
+                this.calculateSize(this);
+            },
 
-    data () {
-      return  {
-        height: 0,
-        dragging: false,
-        start: 0
-      }
-    },
+            'area.height' (val, old) {
+                this.calculateSize(this);
+            }
+        },
 
+        methods: {
+            startDrag(e) {
+                e.preventDefault();
+                e.stopPropagation();
 
-    watch: {
-      'wrapper.height' (val, old) {
-        this.calculateSize(this)
-      },
+                e = e.changedTouches ? e.changedTouches[0] : e;
 
-      'area.height' (val, old) {
-        this.calculateSize(this)
-      }
-    },
+                // Prepare to drag
+                this.dragging = true;
+                this.start = e.clientY;
+            },
 
-    methods: {
+            onDrag(e) {
+                if (this.dragging) {
 
-      startDrag(e){
+                    // Make The Parent being in the Dragging State
+                    this.onDragging();
 
-        e.preventDefault()
-        e.stopPropagation()
+                    e.preventDefault();
+                    e.stopPropagation();
 
-        e = e.changedTouches ? e.changedTouches[0] : e
+                    e = e.changedTouches ? e.changedTouches[0] : e;
 
-        // Prepare to drag
-        this.dragging = true,
-        this.start = e.clientY
-      },
+                    const yMovement = e.clientY - this.start;
+                    const yMovementPercentage = yMovement / this.wrapper.height * 100;
 
-      onDrag(e){
+                    // Update the last e.clientY
+                    this.start = e.clientY;
 
-        if(this.dragging){
+                    // The next Vertical Value will be
+                    const next = this.scrolling + yMovementPercentage;
 
-          // Make The Parent being in the Dragging State
-          this.onDragging()
+                    // Tell the parent to change the position
+                    this.onChangePosition(next, 'vertical');
+                }
+            },
 
-          e.preventDefault()
-          e.stopPropagation()
+            stopDrag(e) {
+                if (this.dragging) {
+                    // Parent Should Change the Dragging State
+                    this.onStopDrag();
+                    this.dragging = false;
+                }
+            },
 
-          e = e.changedTouches ? e.changedTouches[0] : e
+            jump(e) {
+                const isContainer = e.target === this.$refs.container;
+                if (isContainer) {
+                    // Get the Element Position
+                    const position = this.$refs.scrollbar.getBoundingClientRect();
 
-          let yMovement = e.clientY - this.start
-          let yMovementPercentage = yMovement / this.wrapper.height * 100
+                    // Calculate the vertical Movement
+                    const yMovement = e.clientY - position.top;
+                    const centerize = (this.height / 2);
+                    const yMovementPercentage = yMovement / this.wrapper.height * 100 - centerize;
 
-          // Update the last e.clientY
-          this.start = e.clientY
+                    // Update the last e.clientY
+                    this.start = e.clientY;
 
-          // The next Vertical Value will be
-          let next = this.scrolling + yMovementPercentage
+                    // The next Vertical Value will be
+                    const next = this.scrolling + yMovementPercentage;
 
-          // Tell the parent to change the position
-          this.onChangePosition(next, 'vertical')
+                    // Tell the parent to change the position
+                    this.onChangePosition(next, 'vertical');
+                }
+            },
 
-        }
+            calculateSize(source) {
+                // Scrollbar Height
+                this.height = source.wrapper.height / source.area.height * 100;
+            },
 
-      },
+            getSize() {
+                // The Elements
+                const $scrollArea = this.$refs.container.parentElement;
+                const $scrollWrapper = $scrollArea.parentElement;
 
-      stopDrag(e){
-        if(this.dragging){
-          // Parent Should Change the Dragging State
-          this.onStopDrag()
-          this.dragging = false
-        }
-      },
+                // Get new Elements Size
+                const elementSize = {
+                    // Scroll Area Height and Width
+                    scrollAreaHeight: $scrollArea.children[0].clientHeight,
+                    scrollAreaWidth: $scrollArea.children[0].clientWidth,
 
-      jump(e){
+                    // Scroll Wrapper Height and Width
+                    scrollWrapperHeight: $scrollWrapper.clientHeight,
+                    scrollWrapperWidth: $scrollWrapper.clientWidth,
+                };
+                return elementSize;
+            },
 
-        let isContainer = e.target === this.$refs.container
+        },
 
-        if(isContainer){
+        mounted() {
+            this.calculateSize(this);
 
-          // Get the Element Position
-          let position = this.$refs.scrollbar.getBoundingClientRect()
+            // Put the Listener
+            document.addEventListener('mousemove', this.onDrag);
+            document.addEventListener('touchmove', this.onDrag);
+            document.addEventListener('mouseup', this.stopDrag);
+            document.addEventListener('touchend', this.stopDrag);
+        },
 
-          // Calculate the vertical Movement
-          let yMovement = e.clientY - position.top
-          let centerize = (this.height / 2)
-          let yMovementPercentage = yMovement / this.wrapper.height * 100 - centerize
-
-          // Update the last e.clientY
-          this.start = e.clientY
-
-          // The next Vertical Value will be
-          let next = this.scrolling + yMovementPercentage
-
-          // Tell the parent to change the position
-          this.onChangePosition(next, 'vertical')
-
-        }
-      },
-
-      calculateSize(source){
-        // Scrollbar Height
-        this.height = source.wrapper.height / source.area.height * 100
-      },
-
-      getSize(){
-        // The Elements
-        let $scrollArea = this.$refs.container.parentElement
-        let $scrollWrapper = $scrollArea.parentElement
-
-        // Get new Elements Size
-        let elementSize = {
-          // Scroll Area Height and Width
-          scrollAreaHeight: $scrollArea.children[0].clientHeight,
-          scrollAreaWidth: $scrollArea.children[0].clientWidth,
-
-          // Scroll Wrapper Height and Width
-          scrollWrapperHeight: $scrollWrapper.clientHeight,
-          scrollWrapperWidth: $scrollWrapper.clientWidth,
-        }
-        return elementSize
-      },
-
-    },
-
-    mounted() {
-      this.calculateSize(this)
-
-      // Put the Listener
-      document.addEventListener("mousemove", this.onDrag)
-      document.addEventListener("touchmove", this.onDrag)
-      document.addEventListener("mouseup", this.stopDrag)
-      document.addEventListener("touchend", this.stopDrag)
-    },
-
-    beforeDestroy() {
-      // Remove the Listener
-      document.removeEventListener("mousemove", this.onDrag)
-      document.removeEventListener("touchmove", this.onDrag)
-      document.removeEventListener("mouseup", this.stopDrag)
-      document.removeEventListener("touchend", this.stopDrag)
-    },
-
-  }
-
+        beforeDestroy() {
+            // Remove the Listener
+            document.removeEventListener('mousemove', this.onDrag);
+            document.removeEventListener('touchmove', this.onDrag);
+            document.removeEventListener('mouseup', this.stopDrag);
+            document.removeEventListener('touchend', this.stopDrag);
+        },
+    };
 </script>
