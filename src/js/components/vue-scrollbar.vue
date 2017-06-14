@@ -93,7 +93,7 @@
              * @returns {boolean}
              */
             allowBodyScrollVertical() {
-                return this.vMovement === this.cachedvMovement;
+                return this.top < 0 || this.vMovement === this.cachedvMovement;
             },
         },
 
